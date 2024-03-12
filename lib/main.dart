@@ -34,7 +34,7 @@ class _PricesDisplayPageState extends State<PricesDisplayPage> {
   List<String> metals = ['XAU', 'XAG'];
   List<String> currencies = ['USD', 'AUD', 'GBP', 'EUR', 'CHF', 'CAD', 'JPY', 'EGP', 'KWD', 'SAR'];
   Map<String, TextEditingController> caratControllers = {};
-  final String apiKey = 'goldapi-1lsltm3aowc-io';
+  final String apiKey = 'goldapi-1b3ndsltnaidg5-io';
   TextEditingController _newCurrencyController = TextEditingController();
 
   @override
@@ -45,26 +45,58 @@ class _PricesDisplayPageState extends State<PricesDisplayPage> {
 
   Future<void> fetchPrices() async {
     final String url = 'https://www.goldapi.io/api/$selectedMetal/$selectedCurrency';
+
     try {
       final response = await http.get(Uri.parse(url), headers: {"x-access-token": apiKey});
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        setState(() {
-          caratControllers = {
-            '24k': TextEditingController(text: data['price_gram_24k'].toString()),
-            '22k': TextEditingController(text: data['price_gram_22k'].toString()),
-            '21k': TextEditingController(text: data['price_gram_21k'].toString()),
-            '20k': TextEditingController(text: data['price_gram_20k'].toString()),
-            '18k': TextEditingController(text: data['price_gram_18k'].toString()),
-          };
-        });
+        if (data != null && _validatePrices(data)) {
+          _updateCaratControllers(data);
+        } else {
+          _clearCaratControllers();
+          showAlert('Some prices are missing or fetched data is null. Please enter the prices manually.');
+        }
       } else {
+        _clearCaratControllers();
         showAlert('Failed to fetch prices. Please enter the prices manually.');
       }
     } catch (e) {
+      _clearCaratControllers();
       showAlert('Error fetching prices: $e. Please enter the prices manually.');
     }
   }
+
+  bool _validatePrices(Map<String, dynamic> data) {
+    return data['price_gram_24k'] != null && data['price_gram_22k'] != null &&
+        data['price_gram_21k'] != null && data['price_gram_20k'] != null &&
+        data['price_gram_18k'] != null;
+  }
+
+  void _updateCaratControllers(Map<String, dynamic> data) {
+    setState(() {
+      caratControllers = {
+        '24k': TextEditingController(text: data['price_gram_24k'].toString()),
+        '22k': TextEditingController(text: data['price_gram_22k'].toString()),
+        '21k': TextEditingController(text: data['price_gram_21k'].toString()),
+        '20k': TextEditingController(text: data['price_gram_20k'].toString()),
+        '18k': TextEditingController(text: data['price_gram_18k'].toString()),
+      };
+    });
+  }
+
+  void _clearCaratControllers() {
+    setState(() {
+      caratControllers = {
+        '24k': TextEditingController(text: ''),
+        '22k': TextEditingController(text: ''),
+        '21k': TextEditingController(text: ''),
+        '20k': TextEditingController(text: ''),
+        '18k': TextEditingController(text: ''),
+      };
+    });
+  }
+
 
   void uploadPricesToFirestore() async {
     if (caratControllers.entries.any((element) => element.value.text.isEmpty)) {
