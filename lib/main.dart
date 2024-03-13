@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'firebase_options.dart'; // Make sure this is correctly set up for your Firebase project.
+import 'firebase_options.dart'; // Make sure this matches your Firebase configuration file
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,224 +15,148 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Gold and Silver Prices',
-      home: PricesDisplayPage(),
+      title: 'Metal Prices App',
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Metal Prices CRUD'),
+        ),
+        body: MetalPricesForm(),
+      ),
     );
   }
 }
 
-class PricesDisplayPage extends StatefulWidget {
+class MetalPricesForm extends StatefulWidget {
   @override
-  _PricesDisplayPageState createState() => _PricesDisplayPageState();
+  _MetalPricesFormState createState() => _MetalPricesFormState();
 }
 
-class _PricesDisplayPageState extends State<PricesDisplayPage> {
-  String selectedCurrency = 'USD';
-  String selectedMetal = 'XAU'; // XAU for Gold, XAG for Silver
-  List<String> metals = ['XAU', 'XAG'];
-  List<String> currencies = ['USD', 'AUD', 'GBP', 'EUR', 'CHF', 'CAD', 'JPY', 'EGP', 'KWD', 'SAR'];
-  Map<String, TextEditingController> caratControllers = {};
-  final String apiKey = 'goldapi-1b3ndsltnaidg5-io';
-  TextEditingController _newCurrencyController = TextEditingController();
+class _MetalPricesFormState extends State<MetalPricesForm> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _countryController = TextEditingController();
+  final TextEditingController _currencyController = TextEditingController();
+  final TextEditingController _gold24Controller = TextEditingController();
+  final TextEditingController _gold22Controller = TextEditingController();
+  final TextEditingController _gold21Controller = TextEditingController();
+  final TextEditingController _gold18Controller = TextEditingController();
+  final TextEditingController _silverController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    fetchPrices();
-  }
-
-  Future<void> fetchPrices() async {
-    final String url = 'https://www.goldapi.io/api/$selectedMetal/$selectedCurrency';
-
-    try {
-      final response = await http.get(Uri.parse(url), headers: {"x-access-token": apiKey});
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data != null && _validatePrices(data)) {
-          _updateCaratControllers(data);
-        } else {
-          _clearCaratControllers();
-          showAlert('Some prices are missing or fetched data is null. Please enter the prices manually.');
-        }
-      } else {
-        _clearCaratControllers();
-        showAlert('Failed to fetch prices. Please enter the prices manually.');
-      }
-    } catch (e) {
-      _clearCaratControllers();
-      showAlert('Error fetching prices: $e. Please enter the prices manually.');
-    }
-  }
-
-  bool _validatePrices(Map<String, dynamic> data) {
-    return data['price_gram_24k'] != null && data['price_gram_22k'] != null &&
-        data['price_gram_21k'] != null && data['price_gram_20k'] != null &&
-        data['price_gram_18k'] != null;
-  }
-
-  void _updateCaratControllers(Map<String, dynamic> data) {
-    setState(() {
-      caratControllers = {
-        '24k': TextEditingController(text: data['price_gram_24k'].toString()),
-        '22k': TextEditingController(text: data['price_gram_22k'].toString()),
-        '21k': TextEditingController(text: data['price_gram_21k'].toString()),
-        '20k': TextEditingController(text: data['price_gram_20k'].toString()),
-        '18k': TextEditingController(text: data['price_gram_18k'].toString()),
-      };
+  // CREATE or UPDATE
+  Future<void> createOrUpdateMetalPrice(String country) async {
+    await FirebaseFirestore.instance.collection('metalPrices').doc(country).set({
+      'currency': _currencyController.text.trim(),
+      'gold_24': _gold24Controller.text.trim(),
+      'gold_22': _gold22Controller.text.trim(),
+      'gold_21': _gold21Controller.text.trim(),
+      'gold_18': _gold18Controller.text.trim(),
+      'silver': _silverController.text.trim(),
+      'id': country,
     });
   }
 
-  void _clearCaratControllers() {
-    setState(() {
-      caratControllers = {
-        '24k': TextEditingController(text: ''),
-        '22k': TextEditingController(text: ''),
-        '21k': TextEditingController(text: ''),
-        '20k': TextEditingController(text: ''),
-        '18k': TextEditingController(text: ''),
-      };
-    });
+  // READ
+  Future<Map<String, dynamic>?> readMetalPrice(String country) async {
+    final docSnapshot = await FirebaseFirestore.instance.collection('metalPrices').doc(country).get();
+    return docSnapshot.data();
   }
 
-
-  void uploadPricesToFirestore() async {
-    if (caratControllers.entries.any((element) => element.value.text.isEmpty)) {
-      showAlert('Please enter prices for all carats before uploading.');
-      return;
-    }
-
-    final Map<String, String> metalNames = {
-      'XAU': 'Gold',
-      'XAG': 'Silver',
-    };
-
-    Map<String, dynamic> metalPrices = {};
-    caratControllers.forEach((carat, controller) {
-      metalPrices[carat] = double.tryParse(controller.text) ?? 0.0;
-    });
-
-    final documentReference = FirebaseFirestore.instance.collection('metalPrices').doc(selectedCurrency);
-
-    Map<String, dynamic> updateData = {
-      'currency': selectedCurrency,
-      'last_updated': FieldValue.serverTimestamp(),
-      'metals': {
-        metalNames[selectedMetal] ?? 'Unknown': metalPrices, // Use the full metal name
-      }
-    };
-
-    try {
-      await documentReference.set({
-        ...updateData,
-        'metals': FieldValue.arrayUnion([updateData['metals']])
-      }, SetOptions(merge: true));
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Prices updated successfully in Firestore.')));
-    } catch (e) {
-      showAlert('Error updating prices in Firestore: $e');
-    }
-  }
-
-
-  void showAlert(String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Alert'),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              child: Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
+  // DELETE
+  Future<void> deleteMetalPrice(String country) async {
+    await FirebaseFirestore.instance.collection('metalPrices').doc(country).delete();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Gold and Silver Prices'),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(labelText: 'Select Metal'),
-              value: selectedMetal,
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedMetal = newValue!;
-                  fetchPrices();
-                });
-              },
-              items: metals.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value == 'XAU' ? 'Gold' : 'Silver'),
-                );
-              }).toList(),
-            ),
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(labelText: 'Choose Your Currency'),
-              value: selectedCurrency,
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedCurrency = newValue!;
-                  fetchPrices();
-                });
-              },
-              items: currencies.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-            ),
-            TextField(
-              controller: _newCurrencyController,
-              decoration: InputDecoration(
-                labelText: 'Add New Currency',
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: () {
-                    final newCurrency = _newCurrencyController.text.toUpperCase();
-                    if (!currencies.contains(newCurrency) && newCurrency.isNotEmpty) {
-                      setState(() {
-                        currencies.add(newCurrency);
-                        selectedCurrency = newCurrency;
-                        _newCurrencyController.clear();
-                        fetchPrices();
-                      });
-                    }
-                  },
-                ),
+    return SingleChildScrollView(
+      child: Form(
+        key: _formKey,
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              TextFormField(
+                controller: _countryController,
+                decoration: InputDecoration(labelText: 'Country'),
+                validator: (value) => value!.isEmpty ? 'Please enter a country name' : null,
               ),
-            ),
-            ...caratControllers.entries.map((entry) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: TextField(
-                  controller: entry.value,
-                  decoration: InputDecoration(labelText: '${entry.key} Price Per Gram'),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                ),
-              );
-            }).toList(),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20.0),
-              child: ElevatedButton(
-                onPressed: uploadPricesToFirestore,
-                child: Text('Upload Edited Prices to Firestore'),
+              TextFormField(
+                controller: _currencyController,
+                decoration: InputDecoration(labelText: 'Currency'),
+                validator: (value) => value!.isEmpty ? 'Please enter the currency' : null,
               ),
-            ),
-          ],
+              TextFormField(
+                controller: _gold24Controller,
+                decoration: InputDecoration(labelText: 'Gold 24K Price per gram'),
+                validator: (value) => value!.isEmpty ? 'Please enter gold 24K price per gram' : null,
+              ),
+              TextFormField(
+                controller: _gold22Controller,
+                decoration: InputDecoration(labelText: 'Gold 22K Price per gram'),
+                validator: (value) => value!.isEmpty ? 'Please enter gold 22K price per gram' : null,
+              ),
+              TextFormField(
+                controller: _gold21Controller,
+                decoration: InputDecoration(labelText: 'Gold 21K Price per gram'),
+                validator: (value) => value!.isEmpty ? 'Please enter gold 21K price per gram' : null,
+              ),
+              TextFormField(
+                controller: _gold18Controller,
+                decoration: InputDecoration(labelText: 'Gold 18K Price per gram'),
+                validator: (value) => value!.isEmpty ? 'Please enter gold 18K price per gram' : null,
+              ),
+              TextFormField(
+                controller: _silverController,
+                decoration: InputDecoration(labelText: 'Silver Price per gram'),
+                validator: (value) => value!.isEmpty ? 'Please enter silver price per gram' : null,
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    await createOrUpdateMetalPrice(_countryController.text.trim());
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data saved successfully')));
+                  }
+                },
+                child: Text('Submit'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final data = await readMetalPrice(_countryController.text.trim());
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      content: SingleChildScrollView(
+                        child: ListBody(
+                          children: <Widget>[
+                            Text('Currency: ${data?['currency']}'),
+                            Text('Gold 24K: ${data?['gold_24']}'),
+                            Text('Gold 22K: ${data?['gold_22']}'),
+                            Text('Gold 21K: ${data?['gold_21']}'),
+                            Text('Gold 18K: ${data?['gold_18']}'),
+                            Text('Silver: ${data?['silver']}'),
+                          ],
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          child: Text('OK'),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                child: Text('Read'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  await deleteMetalPrice(_countryController.text.trim());
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data deleted successfully')));
+                },
+                child: Text('Delete'),
+              ),
+            ],
+          ),
         ),
       ),
     );
