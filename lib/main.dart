@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'firebase_options.dart'; // Ensure proper Firebase initialization.
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,17 +65,19 @@ class _CreatePageState extends State<CreatePage> {
   final TextEditingController _silverController = TextEditingController();
 
   Future<void> createMetalPrice() async {
-    await FirebaseFirestore.instance.collection('metalPrices').doc(_countryController.text.trim()).set({
-      'currency': _currencyController.text.trim(),
-      'gold_24': _gold24Controller.text.trim(),
-      'gold_22': _gold22Controller.text.trim(),
-      'gold_21': _gold21Controller.text.trim(),
-      'gold_18': _gold18Controller.text.trim(),
-      'silver': _silverController.text.trim(),
-      'id': _countryController.text.trim(),
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data uploaded successfully')));
-
+    if (_formKey.currentState!.validate()) {
+      await FirebaseFirestore.instance.collection('metalPrices').doc(_countryController.text.trim()).set({
+        'currency': _currencyController.text.trim(),
+        'gold_24': _gold24Controller.text.trim(),
+        'gold_22': _gold22Controller.text.trim(),
+        'gold_21': _gold21Controller.text.trim(),
+        'gold_18': _gold18Controller.text.trim(),
+        'silver': _silverController.text.trim(),
+        'id': _countryController.text.trim(),
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data uploaded successfully')));
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -90,13 +92,76 @@ class _CreatePageState extends State<CreatePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(controller: _countryController, decoration: InputDecoration(labelText: 'Country')),
-                TextFormField(controller: _currencyController, decoration: InputDecoration(labelText: 'Currency')),
-                TextFormField(controller: _gold24Controller, decoration: InputDecoration(labelText: 'Gold 24K Price per gram')),
-                TextFormField(controller: _gold22Controller, decoration: InputDecoration(labelText: 'Gold 22K Price per gram')),
-                TextFormField(controller: _gold21Controller, decoration: InputDecoration(labelText: 'Gold 21K Price per gram')),
-                TextFormField(controller: _gold18Controller, decoration: InputDecoration(labelText: 'Gold 18K Price per gram')),
-                TextFormField(controller: _silverController, decoration: InputDecoration(labelText: 'Silver Price per gram')),
+                TextFormField(
+                  controller: _countryController,
+                  decoration: InputDecoration(labelText: 'Country'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a country';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _currencyController,
+                  decoration: InputDecoration(labelText: 'Currency'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the currency';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _gold24Controller,
+                  decoration: InputDecoration(labelText: 'Gold 24K Price per gram'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter gold 24K price per gram';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _gold22Controller,
+                  decoration: InputDecoration(labelText: 'Gold 22K Price per gram'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter gold 22K price per gram';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _gold21Controller,
+                  decoration: InputDecoration(labelText: 'Gold 21K Price per gram'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter gold 21K price per gram';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _gold18Controller,
+                  decoration: InputDecoration(labelText: 'Gold 18K Price per gram'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter gold 18K price per gram';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _silverController,
+                  decoration: InputDecoration(labelText: 'Silver Price per gram'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter silver price per gram';
+                    }
+                    return null;
+                  },
+                ),
                 ElevatedButton(onPressed: createMetalPrice, child: Text('Submit')),
               ],
             ),
@@ -121,55 +186,112 @@ class _ReadUpdatePageState extends State<ReadUpdatePage> {
   final TextEditingController _gold21Controller = TextEditingController();
   final TextEditingController _gold18Controller = TextEditingController();
   final TextEditingController _silverController = TextEditingController();
+  final TextEditingController _countrySearchController = TextEditingController();
 
-  Future<void> updateMetalPrice() async {
-    if (selectedCountry != null && _formKey.currentState!.validate()) {
-      await FirebaseFirestore.instance.collection('metalPrices').doc(selectedCountry).update({
-        'currency': _currencyController.text.trim(),
-        'gold_24': _gold24Controller.text.trim(),
-        'gold_22': _gold22Controller.text.trim(),
-        'gold_21': _gold21Controller.text.trim(),
-        'gold_18': _gold18Controller.text.trim(),
-        'silver': _silverController.text.trim(),
+  List<String> _countryList = [];
+  List<String> _filteredCountryList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCountryList();
+  }
+
+  Future<void> _fetchCountryList() async {
+    var snapshot = await FirebaseFirestore.instance.collection('metalPrices').get();
+    final List<String> countries = snapshot.docs.map((doc) => doc.id).toList();
+    setState(() {
+      _countryList = countries;
+      _filteredCountryList = countries;
+    });
+  }
+
+  void _showCountryPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Column(
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  onChanged: (value) {
+                    setState(() {
+                      _filteredCountryList = _countryList.where((country) =>
+                          country.toLowerCase().contains(value.toLowerCase())).toList();
+                    });
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Search Country',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _filteredCountryList.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return ListTile(
+                      title: Text(_filteredCountryList[index]),
+                      onTap: () {
+                        setState(() {
+                          selectedCountry = _filteredCountryList[index];
+                          _countrySearchController.text = selectedCountry!;
+                        });
+                        Navigator.pop(context);
+                        _fetchMetalPrices(selectedCountry!);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _fetchMetalPrices(String countryId) async {
+    var documentSnapshot = await FirebaseFirestore.instance.collection('metalPrices').doc(countryId).get();
+    if (documentSnapshot.exists) {
+      var data = documentSnapshot.data() as Map<String, dynamic>;
+      setState(() {
+        _currencyController.text = data['currency'];
+        _gold24Controller.text = data['gold_24'];
+        _gold22Controller.text = data['gold_22'];
+        _gold21Controller.text = data['gold_21'];
+        _gold18Controller.text = data['gold_18'];
+        _silverController.text = data['silver'];
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data updated successfully')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Read & Update Metal Prices")),
+      appBar: AppBar(
+        title: Text('Read & Update Metal Prices'),
+      ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            FutureBuilder<QuerySnapshot>(
-              future: FirebaseFirestore.instance.collection('metalPrices').get(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return CircularProgressIndicator();
-                List<DropdownMenuItem<String>> countryItems = snapshot.data!.docs.map((doc) => DropdownMenuItem(
-                  value: doc.id,
-                  child: Text(doc.id),
-                )).toList();
-                return DropdownButtonFormField<String>(
-                  decoration: InputDecoration(labelText: 'Select a country'),
-                  items: countryItems,
-                  onChanged: (value) async {
-                    final docSnapshot = await FirebaseFirestore.instance.collection('metalPrices').doc(value).get();
-                    final data = docSnapshot.data()!;
-                    setState(() {
-                      selectedCountry = value;
-                      _currencyController.text = data['currency'];
-                      _gold24Controller.text = data['gold_24'];
-                      _gold22Controller.text = data['gold_22'];
-                      _gold21Controller.text = data['gold_21'];
-                      _gold18Controller.text = data['gold_18'];
-                      _silverController.text = data['silver'];
-                    });
-                  },
-                  value: selectedCountry,
-                );
-              },
+            Padding(
+              padding: EdgeInsets.all(8.0),
+              child: TextFormField(
+                controller: _countrySearchController,
+                readOnly: true,
+                onTap: _showCountryPicker,
+                decoration: InputDecoration(
+                  labelText: 'Select a country',
+                  suffixIcon: Icon(Icons.arrow_drop_down),
+                ),
+              ),
             ),
             Padding(
               padding: EdgeInsets.all(16),
@@ -177,13 +299,52 @@ class _ReadUpdatePageState extends State<ReadUpdatePage> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(controller: _currencyController, decoration: InputDecoration(labelText: 'Currency')),
-                    TextFormField(controller: _gold24Controller, decoration: InputDecoration(labelText: 'Gold 24K Price')),
-                    TextFormField(controller: _gold22Controller, decoration: InputDecoration(labelText: 'Gold 22K Price')),
-                    TextFormField(controller: _gold21Controller, decoration: InputDecoration(labelText: 'Gold 21K Price')),
-                    TextFormField(controller: _gold18Controller, decoration: InputDecoration(labelText: 'Gold 18K Price')),
-                    TextFormField(controller: _silverController, decoration: InputDecoration(labelText: 'Silver Price')),
-                    ElevatedButton(onPressed: updateMetalPrice, child: Text('Update')),
+                    TextFormField(
+                      controller: _currencyController,
+                      decoration: InputDecoration(labelText: 'Currency'),
+                      validator: (value) => value!.isEmpty ? 'Please enter the currency' : null,
+                    ),
+                    TextFormField(
+                      controller: _gold24Controller,
+                      decoration: InputDecoration(labelText: 'Gold 24K Price'),
+                      validator: (value) => value!.isEmpty ? 'Please enter gold 24K price per gram' : null,
+                    ),
+                    TextFormField(
+                      controller: _gold22Controller,
+                      decoration: InputDecoration(labelText: 'Gold 22K Price'),
+                      validator: (value) => value!.isEmpty ? 'Please enter gold 22K price per gram' : null,
+                    ),
+                    TextFormField(
+                      controller: _gold21Controller,
+                      decoration: InputDecoration(labelText: 'Gold 21K Price'),
+                      validator: (value) => value!.isEmpty ? 'Please enter gold 21K price per gram' : null,
+                    ),
+                    TextFormField(
+                      controller: _gold18Controller,
+                      decoration: InputDecoration(labelText: 'Gold 18K Price'),
+                      validator: (value) => value!.isEmpty ? 'Please enter gold 18K price per gram' : null,
+                    ),
+                    TextFormField(
+                      controller: _silverController,
+                      decoration: InputDecoration(labelText: 'Silver Price'),
+                      validator: (value) => value!.isEmpty ? 'Please enter silver price per gram' : null,
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (_formKey.currentState!.validate()) {
+                          await FirebaseFirestore.instance.collection('metalPrices').doc(selectedCountry).update({
+                            'currency': _currencyController.text.trim(),
+                            'gold_24': _gold24Controller.text.trim(),
+                            'gold_22': _gold22Controller.text.trim(),
+                            'gold_21': _gold21Controller.text.trim(),
+                            'gold_18': _gold18Controller.text.trim(),
+                            'silver': _silverController.text.trim(),
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data updated successfully')));
+                        }
+                      },
+                      child: Text('Update'),
+                    ),
                   ],
                 ),
               ),
@@ -194,7 +355,6 @@ class _ReadUpdatePageState extends State<ReadUpdatePage> {
     );
   }
 }
-
 class DeletePage extends StatefulWidget {
   @override
   _DeletePageState createState() => _DeletePageState();
@@ -202,53 +362,132 @@ class DeletePage extends StatefulWidget {
 
 class _DeletePageState extends State<DeletePage> {
   String? selectedCountry;
+  final TextEditingController _searchController = TextEditingController();
 
-  Future<void> deleteMetalPrice(String? country) async {
-    if (country != null) {
-      await FirebaseFirestore.instance.collection('metalPrices').doc(country).delete();
+  List<String> _countryList = [];
+  List<String> _filteredCountryList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCountryList();
+    _searchController.addListener(() {
+      _filterCountryList(_searchController.text);
+    });
+  }
+
+  Future<void> _fetchCountryList() async {
+    FirebaseFirestore.instance.collection('metalPrices').get().then((querySnapshot) {
+      final List<String> countries = querySnapshot.docs.map((doc) => doc.id).toList();
+      setState(() {
+        _countryList = countries;
+        _filteredCountryList = countries;
+      });
+    });
+  }
+
+  void _filterCountryList(String enteredKeyword) {
+    List<String> results;
+    if (enteredKeyword.isEmpty) {
+      results = _countryList;
+    } else {
+      results = _countryList
+          .where((country) =>
+          country.toLowerCase().contains(enteredKeyword.toLowerCase()))
+          .toList();
+    }
+    setState(() {
+      _filteredCountryList = results;
+    });
+  }
+
+  void _showCountryPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Column(
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                onChanged: _filterCountryList,
+                decoration: InputDecoration(
+                  labelText: 'Search Country',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _filteredCountryList.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return ListTile(
+                    title: Text(_filteredCountryList[index]),
+                    onTap: () {
+                      setState(() {
+                        selectedCountry = _filteredCountryList[index];
+                        _searchController.text = selectedCountry!;
+                      });
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> deleteMetalPrice() async {
+    if (selectedCountry != null) {
+      await FirebaseFirestore.instance.collection('metalPrices').doc(selectedCountry).delete();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Country deleted successfully')));
       setState(() {
-        selectedCountry = null; // Reset the dropdown after deletion
+        selectedCountry = null;
+        _searchController.text = '';
       });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a country to delete')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Delete Metal Price')),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            FutureBuilder<QuerySnapshot>(
-              future: FirebaseFirestore.instance.collection('metalPrices').get(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return CircularProgressIndicator();
-                List<DropdownMenuItem<String>> countryItems = snapshot.data!.docs
-                    .map((doc) => DropdownMenuItem(
-                  value: doc.id,
-                  child: Text(doc.id),
-                ))
-                    .toList();
-                return DropdownButtonFormField<String>(
-                  decoration: InputDecoration(labelText: 'Select a country to delete'),
-                  items: countryItems,
-                  onChanged: (value) => setState(() {
-                    selectedCountry = value;
-                  }),
-                  value: selectedCountry,
-                );
-              },
+      appBar: AppBar(
+        title: Text('Delete Metal Price'),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(8.0),
+            child: TextFormField(
+              controller: _searchController,
+              readOnly: true,
+              onTap: _showCountryPicker,
+              decoration: InputDecoration(
+                labelText: 'Search and select a country to delete',
+                suffixIcon: Icon(Icons.search),
+              ),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => deleteMetalPrice(selectedCountry),
-              child: Text('Delete'),
-            ),
-          ],
-        ),
+          ),
+          ElevatedButton(
+            onPressed: deleteMetalPrice,
+            child: Text('Delete'),
+          ),
+        ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }
