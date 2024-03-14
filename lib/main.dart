@@ -16,10 +16,29 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Metal Prices App',
+      theme: ThemeData(
+        // Add your global theme customizations here
+        inputDecorationTheme: InputDecorationTheme(
+          labelStyle: TextStyle(
+            color: Color(0xFF29586A), // Example: Change label color to green
+          ),
+          // You can also define border styles if needed
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: Color(0xFF29586A), // Color for the border under normal conditions
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: Color(0xFF29586A), // Color for the border when the field is focused
+            ),
+          ),
+        ),
+      ),
       home: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/images/background.jpeg"), 
+            image: AssetImage("assets/images/background.png"),
             fit: BoxFit.cover,
           ),
         ),
@@ -33,29 +52,49 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Metal Prices CRUD')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              child: Text('Create Metal Price'),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => CreatePage())),
-            ),
-            ElevatedButton(
-              child: Text('Read & Update Metal Prices'),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ReadUpdatePage())),
-            ),
-            ElevatedButton(
-              child: Text('Delete Metal Price'),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => DeletePage())),
-            ),
-          ],
+      // Use a Container with a BoxDecoration to set the background image
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("assets/images/background.png"), // Your background image
+            fit: BoxFit.cover, // Cover the whole area of the Container
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              ElevatedButton(
+                child: Text('Create Metal Price'),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => CreatePage())),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Color(0xFF29586A), backgroundColor: Color(0xFFF1FAEE), // Background color
+                ),
+              ),
+              ElevatedButton(
+                child: Text('Read & Update Metal Prices'),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ReadUpdatePage())),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Color(0xFF29586A), backgroundColor: Color(0xFFF1FAEE), // Background color
+                ),
+              ),
+              ElevatedButton(
+                child: Text('Delete Metal Price'),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => DeletePage())),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Color(0xFF29586A), backgroundColor: Color(0xFFF1FAEE), // Background color
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+
+
 class CreatePage extends StatefulWidget {
   @override
   _CreatePageState createState() => _CreatePageState();
@@ -101,7 +140,10 @@ class _CreatePageState extends State<CreatePage> {
               children: [
                 TextFormField(
                   controller: _countryController,
-                  decoration: InputDecoration(labelText: 'Country'),
+                  decoration: InputDecoration(
+                    labelText: 'Country',
+                    labelStyle: TextStyle(color: Color(0xFF29586A)), // Custom label color
+                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter a country';
@@ -109,9 +151,13 @@ class _CreatePageState extends State<CreatePage> {
                     return null;
                   },
                 ),
+                SizedBox(height: 20), // Space between form fields
                 TextFormField(
                   controller: _currencyController,
-                  decoration: InputDecoration(labelText: 'Currency'),
+                  decoration: InputDecoration(
+                    labelText: 'Currency',
+                    labelStyle: TextStyle(color: Color(0xFF29586A)), // Custom label color
+                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter the currency';
@@ -119,56 +165,17 @@ class _CreatePageState extends State<CreatePage> {
                     return null;
                   },
                 ),
-                TextFormField(
-                  controller: _gold24Controller,
-                  decoration: InputDecoration(labelText: 'Gold 24K Price per gram'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter gold 24K price per gram';
-                    }
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: _gold22Controller,
-                  decoration: InputDecoration(labelText: 'Gold 22K Price per gram'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter gold 22K price per gram';
-                    }
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: _gold21Controller,
-                  decoration: InputDecoration(labelText: 'Gold 21K Price per gram'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter gold 21K price per gram';
-                    }
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: _gold18Controller,
-                  decoration: InputDecoration(labelText: 'Gold 18K Price per gram'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter gold 18K price per gram';
-                    }
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: _silverController,
-                  decoration: InputDecoration(labelText: 'Silver Price per gram'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter silver price per gram';
-                    }
-                    return null;
-                  },
-                ),
+                SizedBox(height: 20),
+                buildNumberFormField(_gold24Controller, 'Gold 24K Price per gram'),
+                SizedBox(height: 20),
+                buildNumberFormField(_gold22Controller, 'Gold 22K Price per gram'),
+                SizedBox(height: 20),
+                buildNumberFormField(_gold21Controller, 'Gold 21K Price per gram'),
+                SizedBox(height: 20),
+                buildNumberFormField(_gold18Controller, 'Gold 18K Price per gram'),
+                SizedBox(height: 20),
+                buildNumberFormField(_silverController, 'Silver Price per gram'),
+                SizedBox(height: 30),
                 ElevatedButton(onPressed: createMetalPrice, child: Text('Submit')),
               ],
             ),
@@ -177,7 +184,30 @@ class _CreatePageState extends State<CreatePage> {
       ),
     );
   }
+
+  TextFormField buildNumberFormField(TextEditingController controller, String label) {
+    final numberRegExp = RegExp(r'^\d*\.?\d*$'); // Regex to validate numbers
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Color(0xFF29586A)), // Custom label color
+      ),
+      keyboardType: TextInputType.numberWithOptions(decimal: true),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter $label';
+        } else if (!numberRegExp.hasMatch(value)) {
+          return 'Please enter a valid number';
+        }
+        return null;
+      },
+    );
+  }
 }
+
+
+
 
 class ReadUpdatePage extends StatefulWidget {
   @override
@@ -226,16 +256,13 @@ class _ReadUpdatePageState extends State<ReadUpdatePage> {
                 child: TextField(
                   onChanged: (value) {
                     setState(() {
-                      _filteredCountryList = _countryList.where((country) =>
-                          country.toLowerCase().contains(value.toLowerCase())).toList();
+                      _filteredCountryList = _countryList.where((country) => country.toLowerCase().contains(value.toLowerCase())).toList();
                     });
                   },
                   decoration: InputDecoration(
                     labelText: 'Search Country',
                     prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                    ),
+                    border: OutlineInputBorder(),
                   ),
                 ),
               ),
@@ -282,86 +309,81 @@ class _ReadUpdatePageState extends State<ReadUpdatePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Read & Update Metal Prices'),
-      ),
+      appBar: AppBar(title: Text('Read & Update Metal Prices')),
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: TextFormField(
-                controller: _countrySearchController,
-                readOnly: true,
-                onTap: _showCountryPicker,
-                decoration: InputDecoration(
-                  labelText: 'Select a country',
-                  suffixIcon: Icon(Icons.arrow_drop_down),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _countrySearchController,
+                  readOnly: true,
+                  onTap: _showCountryPicker,
+                  decoration: InputDecoration(
+                    labelText: 'Select a country',
+                    suffixIcon: Icon(Icons.arrow_drop_down),
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _currencyController,
-                      decoration: InputDecoration(labelText: 'Currency'),
-                      validator: (value) => value!.isEmpty ? 'Please enter the currency' : null,
-                    ),
-                    TextFormField(
-                      controller: _gold24Controller,
-                      decoration: InputDecoration(labelText: 'Gold 24K Price'),
-                      validator: (value) => value!.isEmpty ? 'Please enter gold 24K price per gram' : null,
-                    ),
-                    TextFormField(
-                      controller: _gold22Controller,
-                      decoration: InputDecoration(labelText: 'Gold 22K Price'),
-                      validator: (value) => value!.isEmpty ? 'Please enter gold 22K price per gram' : null,
-                    ),
-                    TextFormField(
-                      controller: _gold21Controller,
-                      decoration: InputDecoration(labelText: 'Gold 21K Price'),
-                      validator: (value) => value!.isEmpty ? 'Please enter gold 21K price per gram' : null,
-                    ),
-                    TextFormField(
-                      controller: _gold18Controller,
-                      decoration: InputDecoration(labelText: 'Gold 18K Price'),
-                      validator: (value) => value!.isEmpty ? 'Please enter gold 18K price per gram' : null,
-                    ),
-                    TextFormField(
-                      controller: _silverController,
-                      decoration: InputDecoration(labelText: 'Silver Price'),
-                      validator: (value) => value!.isEmpty ? 'Please enter silver price per gram' : null,
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          await FirebaseFirestore.instance.collection('metalPrices').doc(selectedCountry).update({
-                            'currency': _currencyController.text.trim(),
-                            'gold_24': _gold24Controller.text.trim(),
-                            'gold_22': _gold22Controller.text.trim(),
-                            'gold_21': _gold21Controller.text.trim(),
-                            'gold_18': _gold18Controller.text.trim(),
-                            'silver': _silverController.text.trim(),
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data updated successfully')));
-                        }
-                      },
-                      child: Text('Update'),
-                    ),
-                  ],
+                SizedBox(height: 20),
+                buildTextField(_currencyController, 'Currency'),
+                SizedBox(height: 20),
+                buildTextField(_gold24Controller, 'Gold 24K Price'),
+                SizedBox(height: 20),
+                buildTextField(_gold22Controller, 'Gold 22K Price'),
+                SizedBox(height: 20),
+                buildTextField(_gold21Controller, 'Gold 21K Price'),
+                SizedBox(height: 20),
+                buildTextField(_gold18Controller, 'Gold 18K Price'),
+                SizedBox(height: 20),
+                buildTextField(_silverController, 'Silver Price'),
+                SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      await FirebaseFirestore.instance.collection('metalPrices').doc(selectedCountry).update({
+                        'currency': _currencyController.text.trim(),
+                        'gold_24': _gold24Controller.text.trim(),
+                        'gold_22': _gold22Controller.text.trim(),
+                        'gold_21': _gold21Controller.text.trim(),
+                        'gold_18': _gold18Controller.text.trim(),
+                        'silver': _silverController.text.trim(),
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data updated successfully')));
+                    }
+                  },
+                  child: Text('Update'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Color(0xFF29586A),  // This is the background color of the button
+                    )
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  Widget buildTextField(TextEditingController controller, String label) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter $label';
+        }
+        return null;
+      },
+    );
+  }
 }
+
 class DeletePage extends StatefulWidget {
   @override
   _DeletePageState createState() => _DeletePageState();
@@ -486,6 +508,9 @@ class _DeletePageState extends State<DeletePage> {
           ElevatedButton(
             onPressed: deleteMetalPrice,
             child: Text('Delete'),
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Color(0xFF29586A),  // This is the background color of the button
+              )
           ),
         ],
       ),
