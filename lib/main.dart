@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
       home: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/images/background.jpeg"), // Replace with your image path
+            image: AssetImage("assets/images/background.jpeg"), 
             fit: BoxFit.cover,
           ),
         ),
