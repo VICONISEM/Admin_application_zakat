@@ -16,7 +16,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Metal Prices App',
-      home: HomePage(),
+      home: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("assets/images/background.jpeg"), // Replace with your image path
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: HomePage(),
+      ),
     );
   }
 }
@@ -48,7 +56,6 @@ class HomePage extends StatelessWidget {
     );
   }
 }
-
 class CreatePage extends StatefulWidget {
   @override
   _CreatePageState createState() => _CreatePageState();
